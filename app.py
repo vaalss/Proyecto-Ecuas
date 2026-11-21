@@ -1,13 +1,9 @@
-import csv
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, messagebox
 
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import (
-    FigureCanvasTkAgg,
-    NavigationToolbar2Tk
-)
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from simulacion import ejecutar_problema
 from convergencia import estudiar_convergencia
@@ -23,26 +19,26 @@ COLORES = {
 class Aplicacion:
     def __init__(self, ventana):
         self.ventana = ventana
-        ventana.title("Ecuaciones diferenciales: Euler y RK4")
-        ventana.geometry("1150x800")
+
+        ventana.title("Euler y Runge–Kutta de cuarto orden")
+        ventana.geometry("1100x780")
         ventana.minsize(900, 650)
 
-        self.paso = tk.StringVar()
-        self.variable = tk.StringVar()
         self.descripcion = tk.StringVar()
-
-        self.tablas = {}
+        self.texto_error = tk.StringVar()
+        self.texto_convergencia = tk.StringVar()
 
         self.crear_controles()
         self.crear_pestanas()
+
         self.cambiar_problema()
 
     def crear_controles(self):
-        controles = ttk.Frame(self.ventana, padding=12)
-        controles.pack(fill="x")
+        marco = ttk.Frame(self.ventana, padding=12)
+        marco.pack(fill="x")
 
         ttk.Label(
-            controles,
+            marco,
             text="Comparación de Euler y RK4",
             font=("Arial", 16, "bold")
         ).grid(
@@ -54,55 +50,53 @@ class Aplicacion:
         )
 
         ttk.Label(
-            controles,
+            marco,
             text="Problema:"
-        ).grid(row=1, column=0, sticky="w")
+        ).grid(row=1, column=0)
 
         self.selector_problema = ttk.Combobox(
-            controles,
+            marco,
             values=[p["nombre"] for p in PROBLEMAS],
             state="readonly",
-            width=25
+            width=24
         )
         self.selector_problema.grid(
-            row=1, column=1, padx=(5, 20), sticky="w"
+            row=1, column=1, padx=(5, 20)
         )
         self.selector_problema.current(0)
 
         ttk.Label(
-            controles,
+            marco,
             text="Paso:"
-        ).grid(row=1, column=2, sticky="w")
+        ).grid(row=1, column=2)
 
         self.selector_paso = ttk.Combobox(
-            controles,
-            textvariable=self.paso,
+            marco,
             state="readonly",
             width=10
         )
         self.selector_paso.grid(
-            row=1, column=3, padx=(5, 20), sticky="w"
+            row=1, column=3, padx=(5, 20)
         )
 
         ttk.Label(
-            controles,
+            marco,
             text="Variable:"
-        ).grid(row=1, column=4, sticky="w")
+        ).grid(row=1, column=4)
 
         self.selector_variable = ttk.Combobox(
-            controles,
-            textvariable=self.variable,
+            marco,
             state="readonly",
             width=16
         )
         self.selector_variable.grid(
-            row=1, column=5, padx=5, sticky="w"
+            row=1, column=5, padx=5
         )
 
         ttk.Label(
-            controles,
+            marco,
             textvariable=self.descripcion,
-            wraplength=1050
+            wraplength=1000
         ).grid(
             row=2,
             column=0,
@@ -115,10 +109,12 @@ class Aplicacion:
             "<<ComboboxSelected>>",
             self.cambiar_problema
         )
+
         self.selector_paso.bind(
             "<<ComboboxSelected>>",
             self.actualizar
         )
+
         self.selector_variable.bind(
             "<<ComboboxSelected>>",
             self.actualizar
@@ -133,79 +129,67 @@ class Aplicacion:
             pady=(0, 12)
         )
 
-        self.tab_soluciones = ttk.Frame(notebook)
-        self.tab_errores = ttk.Frame(notebook)
-        self.tab_convergencia = ttk.Frame(notebook)
-        self.tab_datos = ttk.Frame(notebook)
+        soluciones = ttk.Frame(notebook)
+        errores = ttk.Frame(notebook)
+        convergencia = ttk.Frame(notebook)
+        datos = ttk.Frame(notebook)
 
-        notebook.add(self.tab_soluciones, text="Soluciones")
-        notebook.add(self.tab_errores, text="Errores")
-        notebook.add(
-            self.tab_convergencia,
-            text="Convergencia"
-        )
-        notebook.add(self.tab_datos, text="Datos")
+        notebook.add(soluciones, text="Soluciones")
+        notebook.add(errores, text="Errores")
+        notebook.add(convergencia, text="Convergencia")
+        notebook.add(datos, text="Datos")
 
         ttk.Label(
-            self.tab_soluciones,
+            soluciones,
             text=(
-                "Negro: solución exacta. Naranja: Euler. Azul: RK4. "
-                "La variable seleccionada se muestra frente al tiempo."
+                "Negro: solución exacta. "
+                "Naranja: Euler. Azul: RK4."
             ),
-            padding=8,
-            wraplength=1000
+            padding=8
         ).pack(fill="x")
 
-        self.texto_error = tk.StringVar()
-
         ttk.Label(
-            self.tab_errores,
+            errores,
             textvariable=self.texto_error,
             padding=8,
             wraplength=1000
         ).pack(fill="x")
 
-        self.texto_convergencia = tk.StringVar()
-
         ttk.Label(
-            self.tab_convergencia,
+            convergencia,
             textvariable=self.texto_convergencia,
             padding=8,
             wraplength=1000
         ).pack(fill="x")
 
-        self.crear_tabla(
-            self.tab_convergencia,
-            "convergencia",
-            altura=5
-        )
-
-        self.fig_soluciones, self.canvas_soluciones = (
-            self.crear_grafica(self.tab_soluciones)
-        )
-
-        self.fig_errores, self.canvas_errores = (
-            self.crear_grafica(self.tab_errores)
-        )
-
-        self.fig_convergencia, self.canvas_convergencia = (
-            self.crear_grafica(self.tab_convergencia)
+        self.tabla_convergencia = self.crear_tabla(
+            convergencia,
+            altura=5,
+            expandir=False
         )
 
         ttk.Label(
-            self.tab_datos,
-            text=(
-                "Valores de la variable seleccionada "
-                "en cada instante de la malla."
-            ),
+            datos,
+            text="Valores de la variable seleccionada.",
             padding=8
         ).pack(fill="x")
 
-        self.crear_tabla(
-            self.tab_datos,
-            "datos",
+        self.tabla_datos = self.crear_tabla(
+            datos,
             altura=18,
             expandir=True
+        )
+
+        self.fig_soluciones, self.canvas_soluciones = (
+            self.crear_grafica(soluciones)
+        )
+
+        self.fig_errores, self.canvas_errores = (
+            self.crear_grafica(errores)
+        )
+
+        self.fig_convergencia, self.canvas_convergencia = (
+            self.crear_grafica(convergencia)
         )
 
     def crear_grafica(self, contenedor):
@@ -216,14 +200,6 @@ class Aplicacion:
             master=contenedor
         )
 
-        barra = NavigationToolbar2Tk(
-            canvas,
-            contenedor,
-            pack_toolbar=False
-        )
-        barra.update()
-        barra.pack(side="bottom", fill="x")
-
         canvas.get_tk_widget().pack(
             fill="both",
             expand=True
@@ -231,18 +207,9 @@ class Aplicacion:
 
         return figura, canvas
 
-    def crear_tabla(
-        self,
-        contenedor,
-        nombre,
-        altura,
-        expandir=False
-    ):
-        bloque = ttk.Frame(contenedor, padding=8)
-        bloque.pack(fill="both", expand=expandir)
-
-        marco = ttk.Frame(bloque)
-        marco.pack(fill="both", expand=True)
+    def crear_tabla(self, contenedor, altura, expandir):
+        marco = ttk.Frame(contenedor, padding=8)
+        marco.pack(fill="both", expand=expandir)
 
         tabla = ttk.Treeview(
             marco,
@@ -250,35 +217,20 @@ class Aplicacion:
             height=altura
         )
 
-        desplazamiento = ttk.Scrollbar(
+        barra = ttk.Scrollbar(
             marco,
             orient="vertical",
             command=tabla.yview
         )
 
-        tabla.configure(
-            yscrollcommand=desplazamiento.set
-        )
+        tabla.configure(yscrollcommand=barra.set)
 
-        desplazamiento.pack(side="right", fill="y")
+        barra.pack(side="right", fill="y")
         tabla.pack(side="left", fill="both", expand=True)
 
-        ttk.Button(
-            bloque,
-            text="Guardar tabla CSV",
-            command=lambda: self.guardar_tabla(nombre)
-        ).pack(anchor="e", pady=(6, 0))
+        return tabla
 
-        self.tablas[nombre] = {
-            "widget": tabla,
-            "columnas": [],
-            "filas": [],
-        }
-
-    def llenar_tabla(self, nombre, columnas, filas):
-        datos = self.tablas[nombre]
-        tabla = datos["widget"]
-
+    def llenar_tabla(self, tabla, columnas, filas):
         tabla.delete(*tabla.get_children())
         tabla["columns"] = columnas
 
@@ -287,64 +239,16 @@ class Aplicacion:
             tabla.column(
                 columna,
                 width=170,
-                minwidth=100,
                 anchor="center"
             )
 
         for fila in filas:
-            valores = []
-
-            for valor in fila:
-                if valor is None:
-                    valores.append("—")
-                elif isinstance(valor, (float, np.floating)):
-                    valores.append(f"{valor:.8g}")
-                else:
-                    valores.append(valor)
+            valores = [
+                "—" if valor is None else f"{valor:.8g}"
+                for valor in fila
+            ]
 
             tabla.insert("", "end", values=valores)
-
-        # Guardamos los números originales para exportarlos.
-        datos["columnas"] = columnas
-        datos["filas"] = filas
-
-    def guardar_tabla(self, nombre):
-        datos = self.tablas[nombre]
-
-        ruta = filedialog.asksaveasfilename(
-            parent=self.ventana,
-            title="Guardar tabla",
-            initialfile=f"{nombre}.csv",
-            defaultextension=".csv",
-            filetypes=[("Archivo CSV", "*.csv")]
-        )
-
-        if not ruta:
-            return
-
-        try:
-            with open(
-                ruta,
-                "w",
-                newline="",
-                encoding="utf-8-sig"
-            ) as archivo:
-                escritor = csv.writer(archivo)
-                escritor.writerow(datos["columnas"])
-                escritor.writerows(datos["filas"])
-
-            messagebox.showinfo(
-                "Tabla guardada",
-                "El archivo se guardó correctamente.",
-                parent=self.ventana
-            )
-
-        except OSError as error:
-            messagebox.showerror(
-                "No se pudo guardar",
-                str(error),
-                parent=self.ventana
-            )
 
     def cambiar_problema(self, evento=None):
         indice = self.selector_problema.current()
@@ -364,15 +268,16 @@ class Aplicacion:
 
     def actualizar(self, evento=None):
         try:
-            h = float(self.paso.get())
+            h = float(self.selector_paso.get())
+            variable = self.selector_variable.get()
+
+            self.columna = self.problema["variables"].index(
+                variable
+            )
 
             self.resultados = ejecutar_problema(
                 self.problema,
                 h
-            )
-
-            self.columna = self.problema["variables"].index(
-                self.variable.get()
             )
 
             texto = (
@@ -386,8 +291,8 @@ class Aplicacion:
 
             self.descripcion.set(texto)
 
-            self.dibujar_soluciones()
-            self.dibujar_errores()
+            self.mostrar_soluciones()
+            self.mostrar_errores()
             self.mostrar_convergencia()
             self.mostrar_datos()
 
@@ -398,13 +303,12 @@ class Aplicacion:
                 parent=self.ventana
             )
 
-    def dibujar_soluciones(self):
+    def mostrar_soluciones(self):
         figura = self.fig_soluciones
         figura.clear()
 
         t = self.resultados["t"]
         exacta = self.resultados["exacta"]
-        columna = self.columna
 
         if exacta is None:
             eje = figura.add_subplot(121)
@@ -415,7 +319,7 @@ class Aplicacion:
         if exacta is not None:
             eje.plot(
                 t,
-                exacta[:, columna],
+                exacta[:, self.columna],
                 color="black",
                 linewidth=2,
                 label="Exacta"
@@ -426,7 +330,7 @@ class Aplicacion:
 
             eje.plot(
                 t,
-                u[:, columna],
+                u[:, self.columna],
                 color=COLORES[metodo],
                 linestyle="--",
                 label=metodo.upper()
@@ -440,11 +344,11 @@ class Aplicacion:
                     label=metodo.upper()
                 )
 
-        eje.set_title(
-            f"Solución: {self.variable.get()}"
-        )
+        variable = self.selector_variable.get()
+
+        eje.set_title(f"Solución de {variable}")
         eje.set_xlabel("t")
-        eje.set_ylabel(self.variable.get())
+        eje.set_ylabel(variable)
         eje.grid(True, alpha=0.3)
         eje.legend()
 
@@ -468,23 +372,23 @@ class Aplicacion:
         figura.tight_layout()
         self.canvas_soluciones.draw()
 
-    def dibujar_errores(self):
+    def mostrar_errores(self):
         figura = self.fig_errores
         figura.clear()
-        eje = figura.add_subplot(111)
 
+        eje = figura.add_subplot(111)
         exacta = self.resultados["exacta"]
 
         if exacta is None:
             self.texto_error.set(
-                "Para Lotka–Volterra no calculamos un error exacto. "
+                "No calculamos un error exacto para Lotka–Volterra. "
                 "Consultá la pestaña Convergencia."
             )
 
             eje.text(
                 0.5,
                 0.5,
-                "No hay una solución explícita de referencia.",
+                "Sin solución explícita de referencia.",
                 ha="center",
                 va="center",
                 transform=eje.transAxes
@@ -512,14 +416,14 @@ class Aplicacion:
                 )
 
             self.texto_error.set(
-                "Error absoluto: distancia al valor exacto. "
                 "Cuanto más cerca de cero, mejor. "
-                "Máximos de la variable seleccionada — "
+                "Error máximo de la variable seleccionada: "
                 + " | ".join(maximos)
             )
 
             eje.set_title(
-                f"Error absoluto: {self.variable.get()}"
+                f"Error absoluto de "
+                f"{self.selector_variable.get()}"
             )
             eje.set_xlabel("t")
             eje.set_ylabel("Error absoluto")
@@ -554,10 +458,9 @@ class Aplicacion:
             ]
 
             texto = (
-                "Se usan todos los pasos definidos para el problema. "
-                "Error máximo entre todos los tiempos y componentes, "
-                "sin normalizarlos. El selector de variable no cambia "
-                "esta comparación."
+                "Se comparan todos los pasos. El error es el máximo "
+                "entre todos los tiempos y componentes, sin normalizar. "
+                "Los selectores de paso y variable no cambian esta tabla."
             )
 
         else:
@@ -568,28 +471,27 @@ class Aplicacion:
             ]
 
             texto = (
-                "Se comparan aproximaciones con pasos h y h/2 "
-                "en tiempos comunes, considerando ambas poblaciones. "
-                "Son diferencias entre mallas, no errores exactos. "
-                "La última fila no tiene una malla más fina disponible."
+                "Se comparan pasos h y h/2 en tiempos comunes, "
+                "considerando ambas poblaciones. No son errores exactos. "
+                "El guion indica que no hay una malla más fina disponible."
             )
 
         self.texto_convergencia.set(texto)
 
         filas = [
             (
-                fila_euler["h"],
-                fila_euler[campo],
-                fila_rk4[campo]
+                euler["h"],
+                euler[campo],
+                rk4[campo]
             )
-            for fila_euler, fila_rk4 in zip(
+            for euler, rk4 in zip(
                 resultados["euler"],
                 resultados["rk4"]
             )
         ]
 
         self.llenar_tabla(
-            "convergencia",
+            self.tabla_convergencia,
             columnas,
             filas
         )
@@ -629,30 +531,26 @@ class Aplicacion:
         self.canvas_convergencia.draw()
 
     def mostrar_datos(self):
-        t = self.resultados["t"]
         exacta = self.resultados["exacta"]
-        columna = self.columna
 
         columnas = ["Tiempo"]
-        arreglos = [t]
+        arreglos = [self.resultados["t"]]
 
         if exacta is not None:
             columnas.append("Solución exacta")
-            arreglos.append(exacta[:, columna])
+            arreglos.append(exacta[:, self.columna])
 
         columnas.extend(["Euler", "RK4"])
 
         arreglos.extend([
-            self.resultados["euler"][:, columna],
-            self.resultados["rk4"][:, columna]
+            self.resultados["euler"][:, self.columna],
+            self.resultados["rk4"][:, self.columna]
         ])
 
-        filas = list(zip(*arreglos))
-
         self.llenar_tabla(
-            "datos",
+            self.tabla_datos,
             columnas,
-            filas
+            zip(*arreglos)
         )
 
 
