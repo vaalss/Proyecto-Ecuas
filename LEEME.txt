@@ -1,0 +1,27 @@
+PROYECTO DE ECUACIONES DIFERENCIALES
+Comparación de Euler y RK4
+
+Integrantes:
+Valeria Hernández — 25086
+José Pinto — 25063
+Cristopher Chávez — 25199
+
+Requisitos:
+Python 3 con Tkinter.
+
+Para ejecutar:
+1. Descomprimir el proyecto.
+2. Abrir una terminal en esta carpeta.
+3. Instalar las dependencias:
+   python -m pip install -r requirements.txt
+4. Iniciar la aplicación:
+   python app.py
+
+La aplicación permite seleccionar el problema, el tamaño
+del paso y la variable, y consultar soluciones, errores,
+convergencia y datos.
+
+Para generar la tabla completa de convergencia:
+   python convergencia.py
+
+El archivo se guarda en resultados/convergencia.csv.
